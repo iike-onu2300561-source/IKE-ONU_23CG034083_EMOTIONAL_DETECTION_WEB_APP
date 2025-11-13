@@ -5,7 +5,7 @@ import numpy as np
 
 # Define constants
 ROOT_DIR = os.path.dirname(os.path.abspath(__file__))
-MODEL_FILE = os.path.join(ROOT_DIR, 'emotion_model_v2.pkl')
+MODEL_FILE = os.path.join(ROOT_DIR, 'emotion_detect_model1.pkl')
 
 EMOTION_CLASSES = ['Happy', 'Sad', 'Neutral']
 
