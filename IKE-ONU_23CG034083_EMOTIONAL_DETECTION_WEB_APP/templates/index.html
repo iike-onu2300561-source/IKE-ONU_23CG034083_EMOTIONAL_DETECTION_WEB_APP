@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Emotion Detection Web App</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            background: #f4f7f9;
+            margin: 0;
+            padding: 2em;
+        }
+        h1 { color: #333; }
+        #preview {
+            width: 300px;
+            height: 300px;
+            object-fit: cover;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+            margin-top: 1em;
+        }
+        button {
+            background-color: #0078d7;
+            color: white;
+            border: none;
+            padding: 10px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 0.5em;
+        }
+        button:hover {
+            background-color: #005fa3;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.2em;
+            color: #444;
+        }
+        #probs {
+            margin-top: 10px;
+            font-family: monospace;
+            color: #555;
+        }
+        video { display: none; }
+    </style>
+</head>
+<body>
+
+    <h1>😊 Emotion Detection Web App</h1>
+
+    <input type="file" id="fileInput" accept="image/*"><br>
+    <button id="captureBtn">Use Webcam</button>
+    <button id="predictBtn">Analyze Emotion</button>
+
+    <div>
+        <img id="preview" src="" alt="Your Image Preview">
+        <video id="video" width="300" height="300" autoplay></video>
+    </div>
+
+    <div id="result"></div>
+    <div id="probs"></div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const preview = document.getElementById('preview');
+        const predictBtn = document.getElementById('predictBtn');
+        const captureBtn = document.getElementById('captureBtn');
+        const result = document.getElementById('result');
+        const probs = document.getElementById('probs');
+        const video = document.getElementById('video');
+
+        let capturedData = null;
+
+        // Load image from file
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = () => {
+                preview.src = reader.result;
+                capturedData = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        // Capture from webcam
+        captureBtn.addEventListener('click', async () => {
+            if (video.style.display === "none") {
+                video.style.display = "block";
+                preview.style.display = "none";
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                video.srcObject = stream;
+                captureBtn.textContent = "Take Snapshot";
+            } else {
+                // Capture frame
+                const canvas = document.createElement('canvas');
+                canvas.width = video.videoWidth;
+                canvas.height = video.videoHeight;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(video, 0, 0);
+                capturedData = canvas.toDataURL('image/png');
+                preview.src = capturedData;
+                preview.style.display = "block";
+                video.style.display = "none";
+                captureBtn.textContent = "Use Webcam";
+                video.srcObject.getTracks().forEach(track => track.stop());
+            }
+        });
+
+        // Predict emotion
+        predictBtn.addEventListener('click', async () => {
+            if (!capturedData) {
+                alert("Please upload or capture an image first.");
+                return;
+            }
+            result.textContent = "Analyzing...";
+            probs.textContent = "";
+
+            const response = await fetch("/predict", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ image: capturedData })
+            });
+
+            const data = await response.json();
+            if (data.error) {
